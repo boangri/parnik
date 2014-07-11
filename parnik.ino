@@ -8,7 +8,7 @@ OneWire ds(10);  // on pin 10
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&ds);
 
-const int ledPin = 13;
+const int ledPin = 11;
 const int knobPin = 2;
 const float gain = 4.58/1024;
 // these variables store the values for the knob and LED level
