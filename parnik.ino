@@ -2,11 +2,12 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const char version[] = "1.1.4";
+const char version[] = "1.1.5";
 
 const int knob1Pin = A2;
 const int knob2Pin = A3;
 const int humiditySensorPin = A4;
+//const int distanceSensorPin = A4;
 const int dividerPin = A5;
 const int tempPin = 10;
 const int fanPin = 11;
@@ -109,7 +110,7 @@ void loop(void) {
   knob2Value = (float)analogRead(knob2Pin);
   knob2Value = map(knob2Value, 0, 1023, 0 , 100);
   humValue = (float)analogRead(humiditySensorPin);
-  humValue = map(humValue, 0, 1023, 0 , 100);
+  //humValue = map(humValue, 0, 1023, 0 , 100);
   dividerValue = (float)analogRead(dividerPin);
   // remap the values from 10 bit input to 8 bit output
   //fadeValue = map(knobValue, 0, 1023, 0 , 254);
@@ -138,7 +139,7 @@ void loop(void) {
   lcd.print(fanHours);
   
   lcd.setCursor(2, 3);
-  lcd.print(humidity_avg);
+  lcd.print(humidity);
   lcd.setCursor(8, 3);
   lcd.print(hum_lo);
   lcd.setCursor(14, 3);
@@ -168,6 +169,7 @@ void loop(void) {
        pumpState = 1;
      } 
   }  
+  delay(1000);
 }  
   
 
