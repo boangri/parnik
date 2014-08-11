@@ -2,7 +2,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const char version[] = "1.2.2"; /* sharp branch */
+const char version[] = "1.2.3"; /* sharp branch */
 
 const int knob1Pin = A2;
 const int knob2Pin = A3;
@@ -36,7 +36,8 @@ float humidity;
 float humidity_avg = 0.0;
 float x;
 float x_avg = 0.0;
-
+  // for averaging
+float p,q;
 float volt;
 float volt_avg = 0.0;
 float water, water0;
@@ -88,8 +89,6 @@ void setup(void) {
 }
 
 void loop(void) {
-  // for averaging
-  float p,q;
   it++;
   if (it <= N) {
     navg = (float)it; 
@@ -127,9 +126,15 @@ void loop(void) {
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
   x = (float)analogRead(distanceSensorPin);
-  if ((it > N) && (abs((x - x_avg)/x_avg) < 0.1)) { //reject random outstandings
+  
+  if ((it > N) && (abs((x - x_avg)/x_avg) > 0.1)) { //reject random outstandings
+    Serial.print("Rejected:");
+    Serial.println(toDistance(x));
+  } else {  
     x_avg = p*x_avg +q*x;
-  }
+  }  
+  Serial.println(toDistance(x_avg));
+  
   water = toVolume(toDistance(x_avg));
   lcd.setCursor(14, 0);
   lcd.print(workHours);
