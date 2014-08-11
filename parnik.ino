@@ -2,18 +2,20 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const char version[] = "1.1.5";
+const char version[] = "1.2.2"; /* sharp branch */
 
 const int knob1Pin = A2;
 const int knob2Pin = A3;
 const int humiditySensorPin = A4;
-//const int distanceSensorPin = A4;
+const int distanceSensorPin = A4;
 const int dividerPin = A5;
 const int tempPin = 10;
 const int fanPin = 11;
 const int pumpPin = 12;
 
-const int N = 4;
+const int N = 10;
+
+const float Vpoliv = 20; // Volume of water for poliv
 
 LiquidCrystal lcd(3,5,6,7,8,9);
 // DS18S20 Temperature chip i/o
@@ -27,24 +29,26 @@ float knob1Value;
 float knob2Value;
 float dividerValue;
 float humValue;
-//int count = 0;
-//int last = 0;
-//int next = 0;
-//int delta;
+float distValue;
 float temp;
 float temp_avg = 0.0;
 float humidity;
 float humidity_avg = 0.0;
+float x;
+float x_avg = 0.0;
+
 float volt;
 float volt_avg = 0.0;
+float water, water0;
 float temp_lo, temp_hi;
 float hum_lo, hum_hi;
 int fanState = 0;
 int pumpState = 0;
-int i = 0; // iteration counter;
+int it = 0; // iteration counter;
 float navg ; // number of samples for averaging
 float workHours, fanHours, pumpHours; // work time (hours)
 unsigned long fanMillis, pumpMillis, workMillis, delta;
+int np = 0; /* poliv session number */
 
 void setup(void) {
   Serial.begin(9600);
@@ -58,6 +62,8 @@ void setup(void) {
   
   lcd.setCursor(0, 1);
   lcd.print("U=");
+  lcd.setCursor(8, 1);
+  lcd.print("W=");
   
   lcd.setCursor(0, 2);
   lcd.print("T=");
@@ -84,14 +90,12 @@ void setup(void) {
 void loop(void) {
   // for averaging
   float p,q;
-  i++;
-  if (i < N) {
-    navg = (float)i;
-  } else {
-    navg = (float)N;
-  }   
-  q = 1.0/navg;
-  p = 1.0 - q;
+  it++;
+  if (it <= N) {
+    navg = (float)it; 
+    q = 1.0/navg;
+    p = 1.0 - q;
+  }
   // Timing
   delta = millis() - workMillis;
   workMillis += delta;
@@ -110,10 +114,8 @@ void loop(void) {
   knob2Value = (float)analogRead(knob2Pin);
   knob2Value = map(knob2Value, 0, 1023, 0 , 100);
   humValue = (float)analogRead(humiditySensorPin);
-  //humValue = map(humValue, 0, 1023, 0 , 100);
+  humValue = map(humValue, 0, 1023, 0 , 100);
   dividerValue = (float)analogRead(dividerPin);
-  // remap the values from 10 bit input to 8 bit output
-  //fadeValue = map(knobValue, 0, 1023, 0 , 254);
   temp_lo = gain*knob1Value;
   temp_hi = temp_lo + 1.0;
   hum_lo = knob2Value;
@@ -124,12 +126,18 @@ void loop(void) {
   humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
-  
+  x = (float)analogRead(distanceSensorPin);
+  if ((it > N) && (abs((x - x_avg)/x_avg) < 0.1)) { //reject random outstandings
+    x_avg = p*x_avg +q*x;
+  }
+  water = toVolume(toDistance(x_avg));
   lcd.setCursor(14, 0);
   lcd.print(workHours);
   
   lcd.setCursor(2, 1);
   lcd.print(volt_avg); 
+  lcd.setCursor(10, 1);
+  lcd.print(water); 
   
   lcd.setCursor(2, 2);
   lcd.print(temp);  
@@ -159,6 +167,22 @@ void loop(void) {
   }  
   /* pump control */
   if (pumpState == 1) {
+    float V;
+    V = np == 1 ? Vpoliv*0.1 : Vpoliv;
+     if ((water < 0.) ||(water0 - water > V)) {
+       digitalWrite(pumpPin, LOW);
+       pumpState = 0;    
+     } 
+  } else {
+     if ((workHours > 24.*(np)) && (water > 0.)) {
+       digitalWrite(pumpPin, HIGH);    
+       pumpState = 1;
+       np++;
+       water0 = water;
+     } 
+  }  
+  /*
+  if (pumpState == 1) {
      if (humidity_avg > hum_hi) {
        digitalWrite(pumpPin, LOW);
        pumpState = 0;    
@@ -169,9 +193,32 @@ void loop(void) {
        pumpState = 1;
      } 
   }  
-  delay(1000);
+  */
 }  
   
+  
+/*
+ * to Volume - calculate volume of water in the barrel (L)
+ * @input float x - sensor value [0-1023]
+ */
+const float barrelVolume = 80; 
+float values[] = {195, 210, 222, 240, 278, 332, 473, 512, 552};
+float dist[]   = {700, 650, 610, 560, 490, 410, 270, 230, 180};
+int Np = 9 ; /* array size */
 
+float toDistance(float x) {
+  if (x < 195) return 700;
+  for (int i = 0; i < Np -1; i++) {
+    float v0, v1;
+    v0 = values[i];
+    v1 = values[i+1];
+    if ((x >= v0) && (x < v1)) {
+      return dist[i] + (dist[i+1] - dist[i])*(x - v0)/(v1 - v0);
+    }
+  }
+  return 180;  
+}
 
-
+float toVolume(float l) {
+  return 80.*(650. - l)/470.;
+}  
