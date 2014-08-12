@@ -2,7 +2,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const char version[] = "1.2.3"; /* sharp branch */
+const char version[] = "1.2.4"; /* sharp branch */
 
 const int knob1Pin = A2;
 const int knob2Pin = A3;
@@ -15,7 +15,8 @@ const int pumpPin = 12;
 
 const int N = 10;
 
-const float Vpoliv = 20; // Volume of water for poliv
+const float Vpoliv = 5; // Liters every poliv
+const float Tpoliv = 4; // Every 4 hours
 
 LiquidCrystal lcd(3,5,6,7,8,9);
 // DS18S20 Temperature chip i/o
@@ -173,13 +174,13 @@ void loop(void) {
   /* pump control */
   if (pumpState == 1) {
     float V;
-    V = np == 1 ? Vpoliv*0.1 : Vpoliv;
+    V = np == 1 ? Vpoliv*0.4 : Vpoliv;
      if ((water < 0.) ||(water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
        pumpState = 0;    
      } 
   } else {
-     if ((workHours > 24.*(np)) && (water > 0.)) {
+     if ((workHours > Tpoliv*np) && (water > 0.)) {
        digitalWrite(pumpPin, HIGH);    
        pumpState = 1;
        np++;
