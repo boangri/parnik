@@ -1,15 +1,18 @@
 #include <LiquidCrystal.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <NewPing.h>
 
-const char version[] = "1.2.4"; /* sharp branch */
+const char version[] = "1.3.1"; /* sonar branch, fixed temp_lo=25 */
 
+const int tempPin = A0;
+const int echoPin = A1;
 const int knob1Pin = A2;
 const int knob2Pin = A3;
 const int humiditySensorPin = A4;
 const int distanceSensorPin = A4;
 const int dividerPin = A5;
-const int tempPin = 10;
+const int triggerPin = 10;
 const int fanPin = 11;
 const int pumpPin = 12;
 
@@ -23,6 +26,8 @@ LiquidCrystal lcd(3,5,6,7,8,9);
 OneWire ds(tempPin);  // on pin 10
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&ds);
+#define MAX_DISTANCE 200 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+NewPing sonar(triggerPin, echoPin, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 
 const float gain = 50./1023;
 // these variables store the values for the knob and LED level
@@ -51,6 +56,7 @@ float navg ; // number of samples for averaging
 float workHours, fanHours, pumpHours; // work time (hours)
 unsigned long fanMillis, pumpMillis, workMillis, delta;
 int np = 0; /* poliv session number */
+float h; // distance from sonar to water surface, cm.
 
 void setup(void) {
   Serial.begin(9600);
@@ -87,9 +93,11 @@ void setup(void) {
   pumpMillis = 0; 
   Serial.println(version);
   workMillis = millis();
+  h = 200.;
 }
 
 void loop(void) {
+  unsigned int uS;
   it++;
   if (it <= N) {
     navg = (float)it; 
@@ -108,7 +116,11 @@ void loop(void) {
   workHours = workMillis/3600000.; // Hours;
   fanHours = fanMillis/3600000.;
   pumpHours = pumpMillis/3600000.;
-  
+  // measure water volume
+  uS = sonar.ping_median(11);
+  if (uS > 0) {
+    h = uS / US_ROUNDTRIP_CM;
+  }  
   // read the value from the input
   knob1Value = (float)analogRead(knob1Pin);
   knob2Value = (float)analogRead(knob2Pin);
@@ -116,7 +128,7 @@ void loop(void) {
   humValue = (float)analogRead(humiditySensorPin);
   humValue = map(humValue, 0, 1023, 0 , 100);
   dividerValue = (float)analogRead(dividerPin);
-  temp_lo = gain*knob1Value;
+  temp_lo = 25.0; //gain*knob1Value;
   temp_hi = temp_lo + 1.0;
   hum_lo = knob2Value;
   hum_hi = hum_lo + 2.;
@@ -126,6 +138,7 @@ void loop(void) {
   humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
+  /*
   x = (float)analogRead(distanceSensorPin);
   
   if ((it > N) && (abs((x - x_avg)/x_avg) > 0.1)) { //reject random outstandings
@@ -137,6 +150,14 @@ void loop(void) {
   Serial.println(toDistance(x_avg));
   
   water = toVolume(toDistance(x_avg));
+  */
+  water = toVolume(h);
+  Serial.print("H: ");
+  Serial.print(h);
+  Serial.print(" cm. Volume: ");
+  Serial.print(water);
+  Serial.println(" L.");
+  
   lcd.setCursor(14, 0);
   lcd.print(workHours);
   
@@ -225,6 +246,17 @@ float toDistance(float x) {
   return 180;  
 }
 
-float toVolume(float l) {
-  return 80.*(650. - l)/470.;
+//float toVolume(float l) {
+//  return 80.*(650. - l)/470.;
+//}  
+
+/*
+ * Given a distance to water surface (in sm.)
+ * calculates the volume of water in the barrel (in Liters)
+ */
+float toVolume(float h) {
+  if (h < 2) return 0.; // input data error 
+  return 108. - 108./68.*h;  // 120L barrel
+  //return 196. - 196./79.*h; // 200L barrel
 }  
+
