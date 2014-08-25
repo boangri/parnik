@@ -3,13 +3,15 @@
 #include <DallasTemperature.h>
 #include <NewPing.h>
 
-const char version[] = "1.3.1"; /* sonar branch, fixed temp_lo=25 */
+const char version[] = "1.3.2"; /* sonar version */
+
+#define TEMP_FAN = 25  // temperature for fans switching off
+#define TEMP_PUMP = 15 // temperature - do not pump water if cold enought
 
 const int tempPin = A0;
 const int echoPin = A1;
 const int knob1Pin = A2;
 const int knob2Pin = A3;
-const int humiditySensorPin = A4;
 const int distanceSensorPin = A4;
 const int dividerPin = A5;
 const int triggerPin = 10;
@@ -125,32 +127,20 @@ void loop(void) {
   knob1Value = (float)analogRead(knob1Pin);
   knob2Value = (float)analogRead(knob2Pin);
   knob2Value = map(knob2Value, 0, 1023, 0 , 100);
-  humValue = (float)analogRead(humiditySensorPin);
-  humValue = map(humValue, 0, 1023, 0 , 100);
+  //humValue = (float)analogRead(humiditySensorPin);
+  //humValue = map(humValue, 0, 1023, 0 , 100);
   dividerValue = (float)analogRead(dividerPin);
-  temp_lo = 25.0; //gain*knob1Value;
+  temp_lo = TEMP_FAN; //gain*knob1Value;
   temp_hi = temp_lo + 1.0;
   hum_lo = knob2Value;
   hum_hi = hum_lo + 2.;
   sensors.requestTemperatures();
   temp = sensors.getTempCByIndex(0);
-  humidity = 1.0 * humValue;
-  humidity_avg = p*humidity_avg +q*humidity;
+  //humidity = 1.0 * humValue;
+  //humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
-  /*
-  x = (float)analogRead(distanceSensorPin);
   
-  if ((it > N) && (abs((x - x_avg)/x_avg) > 0.1)) { //reject random outstandings
-    Serial.print("Rejected:");
-    Serial.println(toDistance(x));
-  } else {  
-    x_avg = p*x_avg +q*x;
-  }  
-  Serial.println(toDistance(x_avg));
-  
-  water = toVolume(toDistance(x_avg));
-  */
   water = toVolume(h);
   Serial.print("H: ");
   Serial.print(h);
@@ -173,8 +163,8 @@ void loop(void) {
   lcd.setCursor(14, 2);
   lcd.print(fanHours);
   
-  lcd.setCursor(2, 3);
-  lcd.print(humidity);
+  //lcd.setCursor(2, 3);
+  //lcd.print(humidity);
   lcd.setCursor(8, 3);
   lcd.print(hum_lo);
   lcd.setCursor(14, 3);
@@ -195,60 +185,20 @@ void loop(void) {
   /* pump control */
   if (pumpState == 1) {
     float V;
-    V = np == 1 ? Vpoliv*0.4 : Vpoliv;
-     if ((water < 0.) ||(water0 - water > V)) {
+    V = np == 1 ? Vpoliv*0.1 : Vpoliv;
+     if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
        pumpState = 0;    
      } 
   } else {
-     if ((workHours > Tpoliv*np) && (water > 0.)) {
+     if ((workHours > Tpoliv*np) && (temp > TEMP_PUMP) && (water > 0.)) {
        digitalWrite(pumpPin, HIGH);    
        pumpState = 1;
        np++;
        water0 = water;
      } 
   }  
-  /*
-  if (pumpState == 1) {
-     if (humidity_avg > hum_hi) {
-       digitalWrite(pumpPin, LOW);
-       pumpState = 0;    
-     } 
-  } else {
-     if (humidity_avg < hum_lo) {
-       digitalWrite(pumpPin, HIGH);    
-       pumpState = 1;
-     } 
-  }  
-  */
 }  
-  
-  
-/*
- * to Volume - calculate volume of water in the barrel (L)
- * @input float x - sensor value [0-1023]
- */
-const float barrelVolume = 80; 
-float values[] = {195, 210, 222, 240, 278, 332, 473, 512, 552};
-float dist[]   = {700, 650, 610, 560, 490, 410, 270, 230, 180};
-int Np = 9 ; /* array size */
-
-float toDistance(float x) {
-  if (x < 195) return 700;
-  for (int i = 0; i < Np -1; i++) {
-    float v0, v1;
-    v0 = values[i];
-    v1 = values[i+1];
-    if ((x >= v0) && (x < v1)) {
-      return dist[i] + (dist[i+1] - dist[i])*(x - v0)/(v1 - v0);
-    }
-  }
-  return 180;  
-}
-
-//float toVolume(float l) {
-//  return 80.*(650. - l)/470.;
-//}  
 
 /*
  * Given a distance to water surface (in sm.)
