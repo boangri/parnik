@@ -5,8 +5,8 @@
 
 const char version[] = "1.3.2"; /* sonar version */
 
-#define TEMP_FAN = 25  // temperature for fans switching off
-#define TEMP_PUMP = 15 // temperature - do not pump water if cold enought
+#define TEMP_FAN 25  // temperature for fans switching off
+#define TEMP_PUMP 15 // temperature - do not pump water if cold enought
 
 const int tempPin = A0;
 const int echoPin = A1;
