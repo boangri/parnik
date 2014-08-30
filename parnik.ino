@@ -3,7 +3,7 @@
 #include <DallasTemperature.h>
 #include <NewPing.h>
 
-const char version[] = "1.3.2"; /* sonar version */
+const char version[] = "1.3.3"; /* sonar version */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -191,12 +191,15 @@ void loop(void) {
        pumpState = 0;    
      } 
   } else {
-     if ((workHours > Tpoliv*np) && (temp > TEMP_PUMP) && (water > 0.)) {
-       digitalWrite(pumpPin, HIGH);    
-       pumpState = 1;
-       np++;
-       water0 = water;
-     } 
+     if (workHours > Tpoliv*np) {       
+       np++;  
+       // Switch on the pump only if warm enought and there is water in the barrel     
+       if ((temp > TEMP_PUMP) && (water > 0.)) {
+         digitalWrite(pumpPin, HIGH);    
+         pumpState = 1;
+         water0 = water;
+       }
+     }  
   }  
 }  
 
