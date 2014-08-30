@@ -3,7 +3,7 @@
 #include <DallasTemperature.h>
 #include <NewPing.h>
 
-const char version[] = "1.3.3"; /* sonar version */
+const char version[] = "1.3.4"; /* sonar version */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -185,7 +185,8 @@ void loop(void) {
   /* pump control */
   if (pumpState == 1) {
     float V;
-    V = np == 1 ? Vpoliv*0.1 : Vpoliv;
+    V = (temp - TEMP_PUMP) / (TEMP_FAN - TEMP_PUMP) * Vpoliv;
+    V = np == 1 ? 0.5 : V;  // First poliv - just for test
      if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
        pumpState = 0;    
