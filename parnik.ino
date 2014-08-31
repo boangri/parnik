@@ -3,7 +3,7 @@
 #include <DallasTemperature.h>
 #include <NewPing.h>
 
-const char version[] = "1.3.4"; /* sonar version */
+const char version[] = "1.3.5"; /* sonar version */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -94,8 +94,10 @@ void setup(void) {
   pumpState = 0;
   pumpMillis = 0; 
   Serial.println(version);
-  workMillis = millis();
+  workMillis = 0; // millis();
   h = 200.;
+  it = 0;
+  np = 0;
 }
 
 void loop(void) {
@@ -115,13 +117,13 @@ void loop(void) {
   if (pumpState) {
     pumpMillis += delta;
   }
-  workHours = workMillis/3600000.; // Hours;
-  fanHours = fanMillis/3600000.;
-  pumpHours = pumpMillis/3600000.;
+  workHours = (float)workMillis/3600000.; // Hours;
+  fanHours = (float)fanMillis/3600000.;
+  pumpHours = (float)pumpMillis/3600000.;
   // measure water volume
-  uS = sonar.ping_median(11);
+  uS = sonar.ping_median(5);
   if (uS > 0) {
-    h = uS / US_ROUNDTRIP_CM;
+    h = (float)uS / US_ROUNDTRIP_CM;
   }  
   // read the value from the input
   knob1Value = (float)analogRead(knob1Pin);
@@ -142,7 +144,15 @@ void loop(void) {
   volt_avg = p*volt_avg + q*volt;
   
   water = toVolume(h);
-  Serial.print("H: ");
+  Serial.print(" it=");
+  Serial.print(it);
+  Serial.print(" q=");
+  Serial.print(q);
+  Serial.print(" U=");
+  Serial.print(volt);
+  Serial.print(" Uavg=");
+  Serial.print(volt_avg);
+  Serial.print(" H: ");
   Serial.print(h);
   Serial.print(" cm. Volume: ");
   Serial.print(water);
@@ -152,7 +162,7 @@ void loop(void) {
   lcd.print(workHours);
   
   lcd.setCursor(2, 1);
-  lcd.print(volt_avg); 
+  lcd.print(volt); 
   lcd.setCursor(10, 1);
   lcd.print(water); 
   
@@ -192,7 +202,7 @@ void loop(void) {
        pumpState = 0;    
      } 
   } else {
-     if (workHours > Tpoliv*np) {       
+     if (workHours >= Tpoliv*np) {       
        np++;  
        // Switch on the pump only if warm enought and there is water in the barrel     
        if ((temp > TEMP_PUMP) && (water > 0.)) {
