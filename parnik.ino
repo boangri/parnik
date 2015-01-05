@@ -2,8 +2,10 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <NewPing.h>
+#include "CRC16.h"
+#include "RS485.h"
 
-const char version[] = "1.3.5"; /* sonar version */
+const char version[] = "2.0.1"; /* RS485 version */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -56,7 +58,7 @@ int pumpState = 0;
 int it = 0; // iteration counter;
 float navg ; // number of samples for averaging
 float workHours, fanHours, pumpHours; // work time (hours)
-unsigned long fanMillis, pumpMillis, workMillis, delta;
+unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp;
 int np = 0; /* poliv session number */
 float h; // distance from sonar to water surface, cm.
 
@@ -95,13 +97,18 @@ void setup(void) {
   pumpMillis = 0; 
   Serial.println(version);
   workMillis = 0; // millis();
+  lastTemp = 0;
   h = 200.;
   it = 0;
   np = 0;
+  RS485_setup();
 }
 
 void loop(void) {
   unsigned int uS;
+  
+  if(Serial1.available() > 0) RS485();
+  
   it++;
   if (it <= N) {
     navg = (float)it; 
@@ -125,6 +132,10 @@ void loop(void) {
   if (uS > 0) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
+  ///// !!!!
+  h = 20;
+  ////////
+  
   // read the value from the input
   knob1Value = (float)analogRead(knob1Pin);
   knob2Value = (float)analogRead(knob2Pin);
@@ -136,14 +147,20 @@ void loop(void) {
   temp_hi = temp_lo + 1.0;
   hum_lo = knob2Value;
   hum_hi = hum_lo + 2.;
-  sensors.requestTemperatures();
-  temp = sensors.getTempCByIndex(0);
+  
+  if ((millis() - lastTemp > 30000) || (lastTemp == 0)){ /* measure temperature only once in 30 sec */
+    sensors.requestTemperatures();
+    temp = sensors.getTempCByIndex(0);
+    lastTemp = millis();
+  }
+  
   //humidity = 1.0 * humValue;
   //humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
   
   water = toVolume(h);
+  /*
   Serial.print(" it=");
   Serial.print(it);
   Serial.print(" q=");
@@ -157,6 +174,7 @@ void loop(void) {
   Serial.print(" cm. Volume: ");
   Serial.print(water);
   Serial.println(" L.");
+  */
   
   lcd.setCursor(14, 0);
   lcd.print(workHours);
