@@ -1,11 +1,14 @@
+//#include <CRC16.h>
 #include <LiquidCrystal.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <NewPing.h>
-#include "CRC16.h"
+
+//CRC16 crc16(1);
+
 #include "RS485.h"
 
-const char version[] = "2.0.1"; /* RS485 version */
+const char version[] = "2.0.2"; /* RS485 version */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -160,7 +163,7 @@ void loop(void) {
   volt_avg = p*volt_avg + q*volt;
   
   water = toVolume(h);
-  /*
+  
   Serial.print(" it=");
   Serial.print(it);
   Serial.print(" q=");
@@ -174,7 +177,7 @@ void loop(void) {
   Serial.print(" cm. Volume: ");
   Serial.print(water);
   Serial.println(" L.");
-  */
+  
   
   lcd.setCursor(14, 0);
   lcd.print(workHours);

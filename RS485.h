@@ -41,7 +41,7 @@ void RS485()
     return;
   }
   /* calculate CRC */
-  crc = CRC16(buf, i);
+  crc = crc16.crc(buf, i);
   if (crc != 0) {
     Serial.println("Invalid CRC");
     return; /* CRC error */
@@ -100,7 +100,7 @@ void RS485()
       break;  
   }
   
-  crc = CRC16(obuf, i);
+  crc = crc16.crc(obuf, i);
   obuf[i++] = crc & 0xff;
   obuf[i++] = (crc >> 8) & 0xff;
   
