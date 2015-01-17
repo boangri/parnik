@@ -1,14 +1,14 @@
-//#include <CRC16.h>
+#include <CRC16.h>
 #include <LiquidCrystal.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <NewPing.h>
 
-//CRC16 crc16(1);
+CRC16 crc16(1);
 
 #include "RS485.h"
 
-const char version[] = "2.0.2"; /* RS485 version */
+const char version[] = "2.0.3"; /* RS485 version */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -110,7 +110,7 @@ void setup(void) {
 void loop(void) {
   unsigned int uS;
   
-  if(Serial1.available() > 0) RS485();
+  if(Serial1.available() > 0) RS485(temp);
   
   it++;
   if (it <= N) {

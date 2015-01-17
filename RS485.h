@@ -15,7 +15,7 @@ void RS485_setup()
   digitalWrite(EN,LOW); 
 }  
   
-void RS485()
+void RS485(float temp)
 {
   int i; /* received bytes counter */
   unsigned short crc;
@@ -95,6 +95,22 @@ void RS485()
         obuf[i++] = 0x01;
       } 
       break; 
+    case 0x14: /* get time */
+      if (!sessionOpen || (millis() - time > 20000)) { 
+        Serial.println("Session closed");
+        return; 
+      }
+      time = millis(); /* restart timer */
+      if (buf[2] == 1) {
+        float t1 = (temp+30)*100;
+        int t2 = (int)t1;
+        byte * bp;
+        bp = (byte *)&t2;
+        for (int j = 0; j< sizeof(t2); j++) {
+          obuf[i++] = *bp++;
+        }  
+      } 
+      break;       
     default:
       obuf[i++] = 0x00;
       break;  
