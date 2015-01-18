@@ -139,7 +139,7 @@ void loop(void) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
   ///// !!!!
-  h = 5. + 5.*pumpMillis/300000.;
+  h = 5. + 5.*pumpMillis/1800000.;
   pp->dist = h;
   ////////
   
@@ -170,7 +170,7 @@ void loop(void) {
   
   water = toVolume(h);
   pp->vol = water;
-  
+  /*
   Serial.print(" it=");
   Serial.print(it);
   Serial.print(" q=");
@@ -184,7 +184,7 @@ void loop(void) {
   Serial.print(" cm. Volume: ");
   Serial.print(water);
   Serial.println(" L.");
-  
+  */
   
   lcd.setCursor(14, 0);
   lcd.print(workHours);
@@ -226,7 +226,7 @@ void loop(void) {
   if (pumpState == 1) {
     float V;
     V = (temp - TEMP_PUMP) / (TEMP_FAN - TEMP_PUMP) * Vpoliv;
-    V = np == 1 ? 0.5 : V;  // First poliv - just for test
+    //V = np == 1 ? 0.5 : V;  // First poliv - just for test
      if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
        pumpState = 0; 
