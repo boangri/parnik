@@ -7,6 +7,19 @@ byte buf[BSIZE];
 byte obuf[BSIZE];
 boolean sessionOpen = false;
 unsigned long time = 0;
+struct {
+  float temp1;
+  float temp2;
+  float hum1;
+  float temp_lo;
+  float temp_hi;
+  float temp_tre;
+  float volt;
+  float vol;
+  float dist;
+  int fans;
+  int pump;
+} typedef Parnik;
 
 void RS485_setup()
 {
@@ -15,13 +28,16 @@ void RS485_setup()
   digitalWrite(EN,LOW); 
 }  
   
-void RS485(float temp)
+void RS485(Parnik *pp)
 {
   int i; /* received bytes counter */
   unsigned short crc;
   byte *pass;
   boolean passOk = true;
   unsigned long t, lastReceived; /* when last byte was received - for 5 msec timeout*/
+  byte * bp;
+  float var;
+  int ivar;
   
   i = 0;
   do {
@@ -78,39 +94,67 @@ void RS485(float temp)
       sessionOpen = false;
       obuf[i++] = 0;
       break;  
-    case 4: /* get time */
+    case 4: /* read parameters */
       if (!sessionOpen || (millis() - time > 20000)) { 
         Serial.println("Session closed");
         return; 
       }
       time = millis(); /* restart timer */
-      if (buf[2] == 0) {
-        obuf[i++] = 0x12;
-        obuf[i++] = 0x12;
-        obuf[i++] = 0x17;
-        obuf[i++] = 0x01;
-        obuf[i++] = 0x05;
-        obuf[i++] = 0x01;
-        obuf[i++] = 0x15;
-        obuf[i++] = 0x01;
-      } 
-      break; 
-    case 0x14: /* get time */
-      if (!sessionOpen || (millis() - time > 20000)) { 
-        Serial.println("Session closed");
-        return; 
-      }
-      time = millis(); /* restart timer */
-      if (buf[2] == 1) {
-        float t1 = (temp+30)*100;
-        int t2 = (int)t1;
-        byte * bp;
-        bp = (byte *)&t2;
-        for (int j = 0; j< sizeof(t2); j++) {
+      
+      switch (buf[2]) {
+      case 1: /* temperatures*/
+        var = (pp->temp1 + 30.)*100.;
+        ivar = (int)var;  
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
           obuf[i++] = *bp++;
         }  
-      } 
-      break;       
+        var = (pp->temp_lo + 30.)*100.;
+        ivar = (int)var;  
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
+          obuf[i++] = *bp++;
+        }  
+        var = (pp->temp_hi + 30.)*100.;
+        ivar = (int)var;  
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
+          obuf[i++] = *bp++;
+        }  
+        break;
+        /*
+      case 2: //* humidities 
+        ;
+        break;
+        */
+      case 3: //* motor states 
+        obuf[i++] = pp->fans;
+        obuf[i++] = pp->pump;
+        break;
+      case 4: //* power 
+        var = (pp->volt)*100.;
+        ivar = (int)var;
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
+          obuf[i++] = *bp++;
+        }  
+        break;     
+      case 5: //* water 
+        var = (pp->vol)*100.;
+        ivar = (int)var;
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
+          obuf[i++] = *bp++;
+        }  
+        var = (pp->dist)*100.;
+        ivar = (int)var;
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
+          obuf[i++] = *bp++;
+        }  
+        break;    
+      }  
+      break; 
     default:
       obuf[i++] = 0x00;
       break;  

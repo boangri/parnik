@@ -8,7 +8,7 @@ CRC16 crc16(1);
 
 #include "RS485.h"
 
-const char version[] = "2.0.3"; /* RS485 version */
+const char version[] = "2.1.0"; /* RS485 version + parnik structure */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -65,6 +65,9 @@ unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp;
 int np = 0; /* poliv session number */
 float h; // distance from sonar to water surface, cm.
 
+Parnik parnik;
+Parnik *pp = &parnik;
+
 void setup(void) {
   Serial.begin(9600);
   sensors.begin();
@@ -110,7 +113,7 @@ void setup(void) {
 void loop(void) {
   unsigned int uS;
   
-  if(Serial1.available() > 0) RS485(temp);
+  if(Serial1.available() > 0) RS485(pp);
   
   it++;
   if (it <= N) {
@@ -136,7 +139,8 @@ void loop(void) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
   ///// !!!!
-  h = 20;
+  h = 5. + 5.*pumpMillis/300000.;
+  pp->dist = h;
   ////////
   
   // read the value from the input
@@ -146,14 +150,15 @@ void loop(void) {
   //humValue = (float)analogRead(humiditySensorPin);
   //humValue = map(humValue, 0, 1023, 0 , 100);
   dividerValue = (float)analogRead(dividerPin);
-  temp_lo = TEMP_FAN; //gain*knob1Value;
-  temp_hi = temp_lo + 1.0;
+  pp->temp_lo = temp_lo = TEMP_FAN; //gain*knob1Value;
+  pp->temp_hi = temp_hi = temp_lo + 1.0;
   hum_lo = knob2Value;
   hum_hi = hum_lo + 2.;
   
   if ((millis() - lastTemp > 30000) || (lastTemp == 0)){ /* measure temperature only once in 30 sec */
     sensors.requestTemperatures();
     temp = sensors.getTempCByIndex(0);
+    pp->temp1 = temp;
     lastTemp = millis();
   }
   
@@ -161,8 +166,10 @@ void loop(void) {
   //humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
+  pp->volt = volt_avg;
   
   water = toVolume(h);
+  pp->vol = water;
   
   Serial.print(" it=");
   Serial.print(it);
@@ -205,12 +212,14 @@ void loop(void) {
   if (fanState == 1) {
      if (temp < temp_lo) {
        digitalWrite(fanPin, LOW);
-       fanState = 0;    
+       fanState = 0;  
+       pp->fans = fanState;  
      } 
   } else {
      if (temp > temp_hi) {
        digitalWrite(fanPin, HIGH);    
        fanState = 1;
+       pp->fans = fanState;
      } 
   }  
   /* pump control */
@@ -220,7 +229,8 @@ void loop(void) {
     V = np == 1 ? 0.5 : V;  // First poliv - just for test
      if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
-       pumpState = 0;    
+       pumpState = 0; 
+       pp->pump = pumpState;   
      } 
   } else {
      if (workHours >= Tpoliv*np) {       
@@ -229,6 +239,7 @@ void loop(void) {
        if ((temp > TEMP_PUMP) && (water > 0.)) {
          digitalWrite(pumpPin, HIGH);    
          pumpState = 1;
+         pp->pump = pumpState;
          water0 = water;
        }
      }  
