@@ -23,7 +23,7 @@ const int triggerPin = 10;
 const int fanPin = 11;
 const int pumpPin = 12;
 
-const int N = 10;
+const int N = 20;
 
 const float Vpoliv = 5; // Liters every poliv
 const float Tpoliv = 4; // Every 4 hours
@@ -53,6 +53,7 @@ float x_avg = 0.0;
 float p,q;
 float volt;
 float volt_avg = 0.0;
+float sig, sig_avg = 0.0;
 float water, water0;
 float temp_lo, temp_hi;
 float hum_lo, hum_hi;
@@ -166,17 +167,20 @@ void loop(void) {
   //humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
   volt_avg = p*volt_avg + q*volt;
+  sig = (volt - volt_avg)*(volt - volt_avg);
+  sig_avg = p*sig_avg + q*sig;
   pp->volt = volt_avg;
+  
   
   water = toVolume(h);
   pp->vol = water;
-  /*
+  
   Serial.print(" it=");
   Serial.print(it);
   Serial.print(" q=");
   Serial.print(q);
-  Serial.print(" U=");
-  Serial.print(volt);
+  Serial.print(" Usig=");
+  Serial.print(sqrt(sig_avg));
   Serial.print(" Uavg=");
   Serial.print(volt_avg);
   Serial.print(" H: ");
@@ -184,7 +188,7 @@ void loop(void) {
   Serial.print(" cm. Volume: ");
   Serial.print(water);
   Serial.println(" L.");
-  */
+  
   
   lcd.setCursor(14, 0);
   lcd.print(workHours);
