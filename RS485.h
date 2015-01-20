@@ -15,13 +15,14 @@ struct {
   float temp_hi;
   float temp_tre;
   float volt;
+  float sigma;
   float vol;
   float dist;
   int fans;
   int pump;
 } typedef Parnik;
 
-void RS485_setup()
+void RS485_setup(Parnik *pp)
 {
   Serial1.begin(9600);
   pinMode(EN,OUTPUT);
@@ -63,6 +64,7 @@ void RS485(Parnik *pp)
     return; /* CRC error */
   }
   
+
   i = 0;
   obuf[i++] = myaddr;
   switch (buf[1]) {

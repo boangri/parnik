@@ -23,7 +23,7 @@ const int triggerPin = 10;
 const int fanPin = 11;
 const int pumpPin = 12;
 
-const int N = 20;
+const int N = 100;
 
 const float Vpoliv = 5; // Liters every poliv
 const float Tpoliv = 4; // Every 4 hours
@@ -65,6 +65,9 @@ float workHours, fanHours, pumpHours; // work time (hours)
 unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp;
 int np = 0; /* poliv session number */
 float h; // distance from sonar to water surface, cm.
+int nmeas;
+float volt_sum;
+float volt2_sum;
 
 Parnik parnik;
 Parnik *pp = &parnik;
@@ -108,7 +111,10 @@ void setup(void) {
   h = 200.;
   it = 0;
   np = 0;
-  RS485_setup();
+  nmeas = 0;
+  volt_sum = 0.;
+  volt2_sum = 0.;
+  RS485_setup(pp);
 }
 
 void loop(void) {
@@ -166,10 +172,22 @@ void loop(void) {
   //humidity = 1.0 * humValue;
   //humidity_avg = p*humidity_avg +q*humidity;
   volt = 12.77/2.55*3./1023.* dividerValue;
-  volt_avg = p*volt_avg + q*volt;
-  sig = (volt - volt_avg)*(volt - volt_avg);
-  sig_avg = p*sig_avg + q*sig;
-  pp->volt = volt_avg;
+  nmeas++;
+  volt_sum += volt;
+  volt2_sum += volt*volt;
+  if (nmeas == 100) {
+    float fn = (float)nmeas;
+    pp->volt = volt_sum/fn;
+    pp->sigma = sqrt(volt2_sum/fn - pp->volt*pp->volt); 
+    nmeas = 0;
+    volt_sum = 0.;
+    volt2_sum = 0.; 
+  }
+    
+  //volt_avg = p*volt_avg + q*volt;
+  //sig = (volt - volt_avg)*(volt - volt_avg);
+  //sig_avg = p*sig_avg + q*sig;
+  //pp->volt = volt_avg;
   
   
   water = toVolume(h);
@@ -177,12 +195,12 @@ void loop(void) {
   
   Serial.print(" it=");
   Serial.print(it);
-  Serial.print(" q=");
-  Serial.print(q);
-  Serial.print(" Usig=");
-  Serial.print(sqrt(sig_avg));
+  Serial.print(" sigV=");
+  Serial.print(pp->sigma);
+  Serial.print(" U=");
+  Serial.print(volt);
   Serial.print(" Uavg=");
-  Serial.print(volt_avg);
+  Serial.print(pp->volt);
   Serial.print(" H: ");
   Serial.print(h);
   Serial.print(" cm. Volume: ");
