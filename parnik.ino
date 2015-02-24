@@ -6,11 +6,11 @@
 #include <NewPing.h>
 
 CRC16 crc16(1);
-DHT dht = DHT();
+//DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.0"; /* RS485 version + DHT */
+const char version[] = "2.2.1"; /* RS485 version + Current sensor*/
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -19,7 +19,8 @@ const int tempPin = A0;
 const int echoPin = A1;
 const int knob1Pin = A2;
 const int knob2Pin = A3;
-const int dhtPin = A4;
+//const int dhtPin = A4;
+const int curPin = A4;
 const int dividerPin = A5;
 const int triggerPin = 10;
 const int fanPin = 11;
@@ -70,6 +71,7 @@ float h; // distance from sonar to water surface, cm.
 int nmeas;
 float volt_sum;
 float volt2_sum;
+float current;
 
 Parnik parnik;
 Parnik *pp = &parnik;
@@ -77,7 +79,7 @@ Parnik *pp = &parnik;
 void setup(void) {
   Serial.begin(9600);
   sensors.begin();
-  dht.attach(dhtPin);
+  //dht.attach(dhtPin);
   lcd.begin(20, 4);
   lcd.clear();
   lcd.setCursor(0,0);
@@ -155,11 +157,14 @@ void loop(void) {
   //
   // DHT-11 sensor - temperature and humidity
   //
+  /*
   dht.update();
   if(dht.getLastError() == DHT_ERROR_OK) {
      pp->temp2 = dht.getTemperatureInt();
      pp->hum1 = dht.getHumidityInt();
-  }  
+  }  */
+  current = (float)analogRead(curPin);
+  
   // read the value from the input
   knob1Value = (float)analogRead(knob1Pin);
   knob2Value = (float)analogRead(knob2Pin);
@@ -213,8 +218,8 @@ void loop(void) {
   Serial.print(pp->sigma);
   Serial.print(" U=");
   Serial.print(volt);
-  Serial.print(" Uavg=");
-  Serial.print(pp->volt);
+  Serial.print(" I=");
+  Serial.print(current);
   Serial.print(" H: ");
   Serial.print(h);
   Serial.print(" cm. Volume: ");
