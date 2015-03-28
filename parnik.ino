@@ -10,7 +10,7 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.0"; /* RS485 version + DHT */
+const char version[] = "2.2.2"; /* RS485 version + DHT */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -149,7 +149,7 @@ void loop(void) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
   ///// !!!!
-  h = 5. + 5.*pumpMillis/1800000.;
+  //h = 5. + 5.*pumpMillis/1800000.;
   pp->dist = h;
   //////
   //
