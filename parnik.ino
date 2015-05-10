@@ -10,7 +10,7 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.2"; /* RS485 version + DHT */
+const char version[] = "2.2.3"; /* RS485 version + DHT */
 
 #define TEMP_FAN 25  // temperature for fans switching off
 #define TEMP_PUMP 15 // temperature - do not pump water if cold enought
@@ -288,7 +288,7 @@ void loop(void) {
  */
 float toVolume(float h) {
   if (h < 2) return 0.; // input data error 
-  return 108. - 108./68.*h;  // 120L barrel
-  //return 196. - 196./79.*h; // 200L barrel
+  //return 108. - 108./68.*h;  // 120L barrel
+  return 196. - 196./79.*h; // 200L barrel
 }  
 
