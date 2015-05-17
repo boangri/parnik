@@ -10,10 +10,10 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.3"; /* RS485 version + DHT */
+const char version[] = "2.2.4"; /* RS485 version + DHT */
 
 #define TEMP_FAN 25  // temperature for fans switching off
-#define TEMP_PUMP 15 // temperature - do not pump water if cold enought
+#define TEMP_PUMP 20 // temperature - do not pump water if cold enought
 
 const int tempPin = A0;
 const int echoPin = A1;
@@ -144,7 +144,7 @@ void loop(void) {
   fanHours = (float)fanMillis/3600000.;
   pumpHours = (float)pumpMillis/3600000.;
   // measure water volume
-  uS = sonar.ping_median(5);
+  uS = sonar.ping_median(7);
   if (uS > 0) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
@@ -181,7 +181,8 @@ void loop(void) {
   
   //humidity = 1.0 * humValue;
   //humidity_avg = p*humidity_avg +q*humidity;
-  volt = 12.77/2.55*3./1023.* dividerValue;
+//  volt = 11.9/3.22*12.77/2.55*3./1023.* dividerValue;
+  volt = 55.52/1023.* dividerValue;
   nmeas++;
   volt_sum += volt;
   volt2_sum += volt*volt;
@@ -261,7 +262,7 @@ void loop(void) {
   /* pump control */
   if (pumpState == 1) {
     float V;
-    V = (temp - TEMP_PUMP) / (TEMP_FAN - TEMP_PUMP) * Vpoliv;
+    V = (temp - TEMP_PUMP) / 10 * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
      if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
@@ -287,7 +288,7 @@ void loop(void) {
  * calculates the volume of water in the barrel (in Liters)
  */
 float toVolume(float h) {
-  if (h < 2) return 0.; // input data error 
+  if (h < 1) return 0.; // input data error 
   //return 108. - 108./68.*h;  // 120L barrel
   return 196. - 196./79.*h; // 200L barrel
 }  
