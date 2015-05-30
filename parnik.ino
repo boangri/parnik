@@ -10,10 +10,10 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.5"; /* RS485 version + DHT */
+const char version[] = "2.2.6"; /* RS485 version + DHT */
 
 #define TEMP_FAN 27  // temperature for fans switching off
-#define TEMP_PUMP 20 // temperature - do not pump water if cold enought
+#define TEMP_PUMP 23 // temperature - do not pump water if cold enought
 #define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
 
@@ -82,27 +82,8 @@ void setup(void) {
   Serial.begin(9600);
   sensors.begin();
   dht.attach(dhtPin);
-  lcd.begin(20, 4);
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("v=");
-  lcd.setCursor(2,0);
-  lcd.print(version);
-  
-  lcd.setCursor(0, 1);
-  lcd.print("U=");
-  lcd.setCursor(8, 1);
-  lcd.print("W=");
-  
-  lcd.setCursor(0, 2);
-  lcd.print("T=");
-  lcd.setCursor(7, 2);
-  lcd.print("/");
-  
-  lcd.setCursor(0, 3);
-  lcd.print("H=");
-  lcd.setCursor(7, 3);
-  lcd.print("/");
+
+  lcd_setup();
   
   pinMode(fanPin, OUTPUT);
   pinMode(pumpPin, OUTPUT);
@@ -185,9 +166,6 @@ void loop(void) {
     lastTemp = millis();
   //}
   
-  //humidity = 1.0 * humValue;
-  //humidity_avg = p*humidity_avg +q*humidity;
-//  volt = 11.9/3.22*12.77/2.55*3./1023.* dividerValue;
   volt = 55.52/1023.* dividerValue;
   nmeas++;
   volt_sum += volt;
@@ -200,56 +178,12 @@ void loop(void) {
     volt_sum = 0.;
     volt2_sum = 0.; 
   }
-    
-  //volt_avg = p*volt_avg + q*volt;
-  //sig = (volt - volt_avg)*(volt - volt_avg);
-  //sig_avg = p*sig_avg + q*sig;
-  //pp->volt = volt_avg;
-  
   
   water = toVolume(h);
   pp->vol = water;
   
-  Serial.print(" it=");
-  Serial.print(it);
-  Serial.print(" H=");
-  Serial.print(pp->hum1);
-  Serial.print("% T=");
-  Serial.print(pp->temp2);
-  Serial.print(" sigV=");
-  Serial.print(pp->sigma);
-  Serial.print(" U=");
-  Serial.print(volt);
-  Serial.print(" Uavg=");
-  Serial.print(pp->volt);
-  Serial.print(" H: ");
-  Serial.print(h);
-  Serial.print(" cm. Volume: ");
-  Serial.print(water);
-  Serial.println(" L.");
-  
-  
-  lcd.setCursor(14, 0);
-  lcd.print(workHours);
-  
-  lcd.setCursor(2, 1);
-  lcd.print(volt); 
-  lcd.setCursor(10, 1);
-  lcd.print(water); 
-  
-  lcd.setCursor(2, 2);
-  lcd.print(temp);  
-  lcd.setCursor(8, 2);
-  lcd.print(temp_lo);
-  lcd.setCursor(14, 2);
-  lcd.print(fanHours);
-  
-  lcd.setCursor(2, 3);
-  lcd.print(pp->hum1);
-  lcd.setCursor(8, 3);
-  lcd.print(hum_lo);
-  lcd.setCursor(14, 3);
-  lcd.print(pumpHours);
+  serial_output();
+  lcd_output();  
   
  /* fan control */ 
   if (fanState == 1) {
@@ -297,3 +231,70 @@ float toVolume(float h) {
   return barrel_volume*(1.0 - h/barrel_height);
 }  
 
+void serial_output() {
+  Serial.print(" it=");
+  Serial.print(it);
+  Serial.print(" H=");
+  Serial.print(pp->hum1);
+  Serial.print("% T=");
+  Serial.print(pp->temp2);
+  Serial.print(" sigV=");
+  Serial.print(pp->sigma);
+  Serial.print(" U=");
+  Serial.print(volt);
+  Serial.print(" Uavg=");
+  Serial.print(pp->volt);
+  Serial.print(" H: ");
+  Serial.print(h);
+  Serial.print(" cm. Volume: ");
+  Serial.print(water);
+  Serial.println(" L.");
+}
+
+void lcd_setup() {
+  lcd.begin(20, 4);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("v=");
+  lcd.setCursor(2,0);
+  lcd.print(version);
+  
+  lcd.setCursor(0, 1);
+  lcd.print("U=");
+  lcd.setCursor(8, 1);
+  lcd.print("W=");
+  
+  lcd.setCursor(0, 2);
+  lcd.print("T=");
+  lcd.setCursor(7, 2);
+  lcd.print("/");
+  
+  lcd.setCursor(0, 3);
+  lcd.print("H=");
+  lcd.setCursor(7, 3);
+  lcd.print("/");  
+}
+
+void lcd_output() {
+  lcd.setCursor(14, 0);
+  lcd.print(workHours);
+  
+  lcd.setCursor(2, 1);
+  lcd.print(volt); 
+  lcd.setCursor(10, 1);
+  lcd.print(water); 
+  
+  lcd.setCursor(2, 2);
+  lcd.print(temp);  
+  lcd.setCursor(8, 2);
+  lcd.print(temp_lo);
+  lcd.setCursor(14, 2);
+  lcd.print(fanHours);
+  
+  lcd.setCursor(2, 3);
+  lcd.print(pp->hum1);
+  lcd.setCursor(8, 3);
+  lcd.print(hum_lo);
+  lcd.setCursor(14, 3);
+  lcd.print(pumpHours);  
+}  
