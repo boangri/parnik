@@ -10,10 +10,12 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.4"; /* RS485 version + DHT */
+const char version[] = "2.2.5"; /* RS485 version + DHT */
 
-#define TEMP_FAN 25  // temperature for fans switching off
+#define TEMP_FAN 27  // temperature for fans switching off
 #define TEMP_PUMP 20 // temperature - do not pump water if cold enought
+#define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
+#define BARREL_DIAMETER 57.0 // 200L
 
 const int tempPin = A0;
 const int echoPin = A1;
@@ -27,8 +29,8 @@ const int pumpPin = 12;
 
 const int N = 100;
 
-const float Vpoliv = 5; // Liters every poliv
-const float Tpoliv = 4; // Every 4 hours
+const float Vpoliv = 1.0; // Liters per centigrade above TEMP_PUMP 
+const float Tpoliv = 4; // Watering every 4 hours
 
 LiquidCrystal lcd(3,5,6,7,8,9);
 // DS18S20 Temperature chip i/o
@@ -70,6 +72,8 @@ float h; // distance from sonar to water surface, cm.
 int nmeas;
 float volt_sum;
 float volt2_sum;
+float barrel_height;
+float barrel_volume;
 
 Parnik parnik;
 Parnik *pp = &parnik;
@@ -118,6 +122,8 @@ void setup(void) {
   volt_sum = 0.;
   volt2_sum = 0.;
   RS485_setup(pp);
+  barrel_height = BARREL_HEIGHT;
+  barrel_volume = BARREL_DIAMETER*BARREL_DIAMETER*3.14/4*BARREL_HEIGHT;
 }
 
 void loop(void) {
@@ -262,7 +268,7 @@ void loop(void) {
   /* pump control */
   if (pumpState == 1) {
     float V;
-    V = (temp - TEMP_PUMP) / 10 * Vpoliv;
+    V = (temp - TEMP_PUMP) * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
      if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
        digitalWrite(pumpPin, LOW);
@@ -288,8 +294,6 @@ void loop(void) {
  * calculates the volume of water in the barrel (in Liters)
  */
 float toVolume(float h) {
-  if (h < 1) return 0.; // input data error 
-  //return 108. - 108./68.*h;  // 120L barrel
-  return 196. - 196./79.*h; // 200L barrel
+  return barrel_volume*(1.0 - h/barrel_height);
 }  
 
