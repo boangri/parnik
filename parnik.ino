@@ -10,7 +10,7 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.6"; /* RS485 version + DHT */
+const char version[] = "2.2.7"; /* RS485 version + DHT */
 
 #define TEMP_FAN 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -104,7 +104,7 @@ void setup(void) {
   volt2_sum = 0.;
   RS485_setup(pp);
   barrel_height = BARREL_HEIGHT;
-  barrel_volume = BARREL_DIAMETER*BARREL_DIAMETER*3.14/4*BARREL_HEIGHT;
+  barrel_volume = BARREL_DIAMETER*BARREL_DIAMETER*3.14/4000*BARREL_HEIGHT;
 }
 
 void loop(void) {
