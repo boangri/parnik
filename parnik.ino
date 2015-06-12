@@ -10,12 +10,15 @@ DHT dht = DHT();
 
 #include "RS485.h"
 
-const char version[] = "2.2.7"; /* RS485 version + DHT */
+const char version[] = "2.2.8"; /* transistors */
 
-#define TEMP_FAN 27  // temperature for fans switching off
-#define TEMP_PUMP 23 // temperature - do not pump water if cold enought
+#define TEMP_FAN 26  // temperature for fans switching off
+#define TEMP_PUMP 20 // temperature - do not pump water if cold enought
 #define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
+
+#define ON LOW
+#define OFF HIGH // if transistors 
 
 const int tempPin = A0;
 const int echoPin = A1;
@@ -87,8 +90,8 @@ void setup(void) {
   
   pinMode(fanPin, OUTPUT);
   pinMode(pumpPin, OUTPUT);
-  digitalWrite(fanPin, LOW);
-  digitalWrite(pumpPin, LOW);
+  digitalWrite(fanPin, OFF);
+  digitalWrite(pumpPin, OFF);
   fanState = 0; 
   fanMillis = 0;
   pumpState = 0;
@@ -188,13 +191,13 @@ void loop(void) {
  /* fan control */ 
   if (fanState == 1) {
      if (temp < temp_lo) {
-       digitalWrite(fanPin, LOW);
+       digitalWrite(fanPin, OFF);
        fanState = 0;  
        pp->fans = fanState;  
      } 
   } else {
      if (temp > temp_hi) {
-       digitalWrite(fanPin, HIGH);    
+       digitalWrite(fanPin, ON);    
        fanState = 1;
        pp->fans = fanState;
      } 
@@ -205,7 +208,7 @@ void loop(void) {
     V = (temp - TEMP_PUMP) * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
      if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
-       digitalWrite(pumpPin, LOW);
+       digitalWrite(pumpPin, OFF);
        pumpState = 0; 
        pp->pump = pumpState;   
      } 
@@ -214,7 +217,7 @@ void loop(void) {
        np++;  
        // Switch on the pump only if warm enought and there is water in the barrel     
        if ((temp > TEMP_PUMP) && (water > 0.)) {
-         digitalWrite(pumpPin, HIGH);    
+         digitalWrite(pumpPin, ON);    
          pumpState = 1;
          pp->pump = pumpState;
          water0 = water;
