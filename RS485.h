@@ -1,7 +1,7 @@
 int EN = 2;
 byte pass1[] = {1,1,1,1,1,1};
 byte pass2[] = {2,2,2,2,2,2};
-byte myaddr = 33;
+byte myaddr = 51;
 const int BSIZE=256;
 byte buf[BSIZE];
 byte obuf[BSIZE];
