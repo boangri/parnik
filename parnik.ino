@@ -1,3 +1,4 @@
+#include <Average.h>
 #include <dht.h>
 #include <CRC16.h>
 #include <LiquidCrystal.h>
@@ -7,10 +8,12 @@
 
 CRC16 crc16(1);
 DHT dht = DHT();
-
+Average voltage(N_AVG);
+Average temperature(N_AVG);
+Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.2.8"; /* transistors */
+const char version[] = "2.3.0"; /* Averages */
 
 #define TEMP_FAN 26  // temperature for fans switching off
 #define TEMP_PUMP 20 // temperature - do not pump water if cold enought
@@ -54,10 +57,6 @@ float temp;
 float temp_avg = 0.0;
 float humidity;
 float humidity_avg = 0.0;
-float x;
-float x_avg = 0.0;
-  // for averaging
-float p,q;
 float volt;
 float volt_avg = 0.0;
 float sig, sig_avg = 0.0;
@@ -69,7 +68,7 @@ int pumpState = 0;
 int it = 0; // iteration counter;
 float navg ; // number of samples for averaging
 float workHours, fanHours, pumpHours; // work time (hours)
-unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp;
+unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp, lastDist, ms;
 int np = 0; /* poliv session number */
 float h; // distance from sonar to water surface, cm.
 int nmeas;
@@ -98,7 +97,7 @@ void setup(void) {
   pumpMillis = 0; 
   Serial.println(version);
   workMillis = 0; // millis();
-  lastTemp = 0;
+  lastTemp = lastDist = millis();
   h = 200.;
   it = 0;
   np = 0;
@@ -116,11 +115,6 @@ void loop(void) {
   if(Serial1.available() > 0) RS485(pp);
   
   it++;
-  if (it <= N) {
-    navg = (float)it; 
-    q = 1.0/navg;
-    p = 1.0 - q;
-  }
   // Timing
   delta = millis() - workMillis;
   workMillis += delta;
@@ -138,9 +132,15 @@ void loop(void) {
   if (uS > 0) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
-  ///// !!!!
-  //h = 5. + 5.*pumpMillis/1800000.;
-  pp->dist = h;
+  distance.putValue(h);
+  ms = millis();
+  if (ms - lastDist > 3000) {
+    pp->dist = distance.getAverage();
+    water = toVolume(pp->dist);
+    pp->vol = water;
+    lastDist = ms;
+  }
+  
   //////
   //
   // DHT-11 sensor - temperature and humidity
@@ -151,20 +151,16 @@ void loop(void) {
      pp->hum1 = dht.getHumidityInt();
   }  
   // read the value from the input
-  knob1Value = (float)analogRead(knob1Pin);
-  knob2Value = (float)analogRead(knob2Pin);
-  knob2Value = map(knob2Value, 0, 1023, 0 , 100);
-  //humValue = (float)analogRead(humiditySensorPin);
-  //humValue = map(humValue, 0, 1023, 0 , 100);
+
   dividerValue = (float)analogRead(dividerPin);
-  pp->temp_lo = temp_lo = TEMP_FAN; //gain*knob1Value;
+  pp->temp_lo = temp_lo = TEMP_FAN;;
   pp->temp_hi = temp_hi = temp_lo + 1.0;
-  hum_lo = knob2Value;
-  hum_hi = hum_lo + 2.;
   
   //if ((millis() - lastTemp > 30000) || (lastTemp == 0)){ /* measure temperature only once in 30 sec */
     sensors.requestTemperatures();
     temp = sensors.getTempCByIndex(0);
+    temperature.putValue(temp);
+    
     pp->temp1 = temp;
     lastTemp = millis();
   //}
@@ -181,9 +177,6 @@ void loop(void) {
     volt_sum = 0.;
     volt2_sum = 0.; 
   }
-  
-  water = toVolume(h);
-  pp->vol = water;
   
   serial_output();
   lcd_output();  

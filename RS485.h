@@ -2,7 +2,7 @@ int EN = 2;
 byte pass1[] = {1,1,1,1,1,1};
 byte pass2[] = {2,2,2,2,2,2};
 byte myaddr = 33;
-const int BSIZE=256;
+const int BSIZE=128;
 byte buf[BSIZE];
 byte obuf[BSIZE];
 boolean sessionOpen = false;
