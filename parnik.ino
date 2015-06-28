@@ -13,10 +13,10 @@ Average temperature(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.3.0"; /* Averages */
+const char version[] = "2.3.1"; /* Averages */
 
 #define TEMP_FAN 26  // temperature for fans switching off
-#define TEMP_PUMP 20 // temperature - do not pump water if cold enought
+#define TEMP_PUMP 23 // temperature - do not pump water if cold enought
 #define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
 
