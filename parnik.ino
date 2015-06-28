@@ -7,13 +7,13 @@
 #include <NewPing.h>
 
 CRC16 crc16(1);
-DHT dht = DHT();
+
 Average voltage(N_AVG);
 Average temperature(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.3.1"; /* Averages */
+const char version[] = "2.3.2"; /* Averages */
 
 #define TEMP_FAN 26  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -25,9 +25,7 @@ const char version[] = "2.3.1"; /* Averages */
 
 const int tempPin = A0;
 const int echoPin = A1;
-const int knob1Pin = A2;
-const int knob2Pin = A3;
-const int dhtPin = A4;
+//const int dhtPin = A2;
 const int dividerPin = A5;
 const int triggerPin = 10;
 const int fanPin = 11;
@@ -37,7 +35,7 @@ const int N = 100;
 
 const float Vpoliv = 1.0; // Liters per centigrade above TEMP_PUMP 
 const float Tpoliv = 4; // Watering every 4 hours
-
+//DHT dht = DHT();
 LiquidCrystal lcd(3,5,6,7,8,9);
 // DS18S20 Temperature chip i/o
 OneWire ds(tempPin);  // on pin 10
@@ -47,9 +45,6 @@ DallasTemperature sensors(&ds);
 NewPing sonar(triggerPin, echoPin, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 
 const float gain = 50./1023;
-// these variables store the values for the knob and LED level
-float knob1Value;
-float knob2Value;
 float dividerValue;
 float humValue;
 float distValue;
@@ -62,7 +57,6 @@ float volt_avg = 0.0;
 float sig, sig_avg = 0.0;
 float water, water0;
 float temp_lo, temp_hi;
-float hum_lo, hum_hi;
 int fanState = 0;
 int pumpState = 0;
 int it = 0; // iteration counter;
@@ -83,7 +77,7 @@ Parnik *pp = &parnik;
 void setup(void) {
   Serial.begin(9600);
   sensors.begin();
-  dht.attach(dhtPin);
+//  dht.attach(dhtPin);
 
   lcd_setup();
   
@@ -145,11 +139,14 @@ void loop(void) {
   //
   // DHT-11 sensor - temperature and humidity
   //
+  /*
   dht.update();
   if(dht.getLastError() == DHT_ERROR_OK) {
      pp->temp2 = dht.getTemperatureInt();
      pp->hum1 = dht.getHumidityInt();
   }  
+  */
+  
   // read the value from the input
 
   dividerValue = (float)analogRead(dividerPin);
@@ -290,7 +287,7 @@ void lcd_output() {
   lcd.setCursor(2, 3);
   lcd.print(pp->hum1);
   lcd.setCursor(8, 3);
-  lcd.print(hum_lo);
+  lcd.print(pp->temp2);
   lcd.setCursor(14, 3);
   lcd.print(pumpHours);  
 }  
