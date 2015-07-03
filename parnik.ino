@@ -13,9 +13,9 @@ Average temperature(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.3.2"; /* Averages */
+const char version[] = "2.3.4"; /* Averages */
 
-#define TEMP_FAN 26  // temperature for fans switching off
+#define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
 #define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
@@ -31,8 +31,6 @@ const int triggerPin = 10;
 const int fanPin = 11;
 const int pumpPin = 12;
 
-const int N = 100;
-
 const float Vpoliv = 1.0; // Liters per centigrade above TEMP_PUMP 
 const float Tpoliv = 4; // Watering every 4 hours
 //DHT dht = DHT();
@@ -44,7 +42,6 @@ DallasTemperature sensors(&ds);
 #define MAX_DISTANCE 200 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 NewPing sonar(triggerPin, echoPin, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 
-const float gain = 50./1023;
 float dividerValue;
 float humValue;
 float distValue;
@@ -53,21 +50,14 @@ float temp_avg = 0.0;
 float humidity;
 float humidity_avg = 0.0;
 float volt;
-float volt_avg = 0.0;
-float sig, sig_avg = 0.0;
 float water, water0;
-float temp_lo, temp_hi;
 int fanState = 0;
 int pumpState = 0;
 int it = 0; // iteration counter;
-float navg ; // number of samples for averaging
 float workHours, fanHours, pumpHours; // work time (hours)
-unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp, lastDist, ms;
+unsigned long fanMillis, pumpMillis, workMillis, delta, lastTemp, lastDist, lastVolt;
 int np = 0; /* poliv session number */
 float h; // distance from sonar to water surface, cm.
-int nmeas;
-float volt_sum;
-float volt2_sum;
 float barrel_height;
 float barrel_volume;
 
@@ -89,15 +79,15 @@ void setup(void) {
   fanMillis = 0;
   pumpState = 0;
   pumpMillis = 0; 
+  pp->temp_hi = TEMP_FANS;
+  pp->temp_lo = pp->temp_hi - 1.0;
+  pp->temp_pump = TEMP_PUMP;
   Serial.println(version);
   workMillis = 0; // millis();
-  lastTemp = lastDist = millis();
+  lastTemp = lastDist = lastVolt = millis();
   h = 200.;
   it = 0;
   np = 0;
-  nmeas = 0;
-  volt_sum = 0.;
-  volt2_sum = 0.;
   RS485_setup(pp);
   barrel_height = BARREL_HEIGHT;
   barrel_volume = BARREL_DIAMETER*BARREL_DIAMETER*3.14/4000*BARREL_HEIGHT;
@@ -105,6 +95,7 @@ void setup(void) {
 
 void loop(void) {
   unsigned int uS;
+  unsigned int ms;
   
   if(Serial1.available() > 0) RS485(pp);
   
@@ -146,58 +137,60 @@ void loop(void) {
      pp->hum1 = dht.getHumidityInt();
   }  
   */
-  
-  // read the value from the input
 
-  dividerValue = (float)analogRead(dividerPin);
-  pp->temp_lo = temp_lo = TEMP_FAN;;
-  pp->temp_hi = temp_hi = temp_lo + 1.0;
-  
-  //if ((millis() - lastTemp > 30000) || (lastTemp == 0)){ /* measure temperature only once in 30 sec */
-    sensors.requestTemperatures();
-    temp = sensors.getTempCByIndex(0);
-    temperature.putValue(temp);
-    
-    pp->temp1 = temp;
-    lastTemp = millis();
-  //}
-  
-  volt = 55.52/1023.* dividerValue;
-  nmeas++;
-  volt_sum += volt;
-  volt2_sum += volt*volt;
-  if (nmeas == 100) {
-    float fn = (float)nmeas;
-    pp->volt = volt_sum/fn;
-    pp->sigma = sqrt(volt2_sum/fn - pp->volt*pp->volt); 
-    nmeas = 0;
-    volt_sum = 0.;
-    volt2_sum = 0.; 
+
+  /* 
+   *  Measure temperature
+   */
+  sensors.requestTemperatures();
+  temp = sensors.getTempCByIndex(0);
+  temperature.putValue(temp);  
+  ms = millis();
+  if (ms - lastTemp > 3000) {
+    pp->temp1 = temperature.getAverage();
+    lastTemp = ms;
   }
-  
+  /* 
+   *  Measure voltage
+   */
+  dividerValue = (float)analogRead(dividerPin);  
+  volt = 55.52/1023.* dividerValue;
+  voltage.putValue(volt);
+  ms = millis();
+  if (ms - lastVolt > 3000) {
+    pp->volt = voltage.getAverage();
+    lastVolt = ms;
+  }
+  /*
+   * Output data
+   */
   serial_output();
   lcd_output();  
   
- /* fan control */ 
+  /*
+   * Fans control 
+   */ 
   if (fanState == 1) {
-     if (temp < temp_lo) {
+     if (temp < pp->temp_lo) {
        digitalWrite(fanPin, OFF);
        fanState = 0;  
        pp->fans = fanState;  
      } 
   } else {
-     if (temp > temp_hi) {
+     if (temp > pp->temp_hi) {
        digitalWrite(fanPin, ON);    
        fanState = 1;
        pp->fans = fanState;
      } 
   }  
-  /* pump control */
+  /*
+   * Pump control 
+   */
   if (pumpState == 1) {
     float V;
-    V = (temp - TEMP_PUMP) * Vpoliv;
+    V = (temp - pp->temp_pump) * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
-     if ((water < 0.) || (temp < TEMP_PUMP) || (water0 - water > V)) {
+     if ((water < 0.) || (temp < pp->temp_pump) || (water0 - water > V)) {
        digitalWrite(pumpPin, OFF);
        pumpState = 0; 
        pp->pump = pumpState;   
@@ -206,7 +199,7 @@ void loop(void) {
      if (workHours >= Tpoliv*np) {       
        np++;  
        // Switch on the pump only if warm enought and there is water in the barrel     
-       if ((temp > TEMP_PUMP) && (water > 0.)) {
+       if ((temp > pp->temp_pump) && (water > 0.)) {
          digitalWrite(pumpPin, ON);    
          pumpState = 1;
          pp->pump = pumpState;
@@ -227,12 +220,12 @@ float toVolume(float h) {
 void serial_output() {
   Serial.print(" it=");
   Serial.print(it);
+  /*
   Serial.print(" H=");
   Serial.print(pp->hum1);
   Serial.print("% T=");
   Serial.print(pp->temp2);
-  Serial.print(" sigV=");
-  Serial.print(pp->sigma);
+  */
   Serial.print(" U=");
   Serial.print(volt);
   Serial.print(" Uavg=");
@@ -240,7 +233,7 @@ void serial_output() {
   Serial.print(" H: ");
   Serial.print(h);
   Serial.print(" cm. Volume: ");
-  Serial.print(water);
+  Serial.print(pp->vol);
   Serial.println(" L.");
 }
 
@@ -280,7 +273,7 @@ void lcd_output() {
   lcd.setCursor(2, 2);
   lcd.print(temp);  
   lcd.setCursor(8, 2);
-  lcd.print(temp_lo);
+  lcd.print(pp->temp_hi);
   lcd.setCursor(14, 2);
   lcd.print(fanHours);
   

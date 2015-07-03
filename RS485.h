@@ -13,7 +13,7 @@ struct {
   float hum1;
   float temp_lo;
   float temp_hi;
-  float temp_tre;
+  float temp_pump;
   float volt;
   float sigma;
   float vol;
@@ -118,6 +118,12 @@ void RS485(Parnik *pp)
           obuf[i++] = *bp++;
         }  
         var = (pp->temp_hi + 30.)*100.;
+        ivar = (int)var;  
+        bp = (byte *)&ivar;
+        for (int j = 0; j < 2; j++) {
+          obuf[i++] = *bp++;
+        }  
+        var = (pp->temp_pump + 30.)*100.;
         ivar = (int)var;  
         bp = (byte *)&ivar;
         for (int j = 0; j < 2; j++) {
