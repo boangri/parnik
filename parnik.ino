@@ -13,7 +13,7 @@ Average temperature(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.3.5"; /* Averages */
+const char version[] = "2.3.6"; /* Averages */
 
 #define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -132,7 +132,7 @@ void loop(void) {
   if (uS > 0) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
-  h *= (1 - 0.5*(pp->temp1 - 20)/(pp->temp1 + 273)); // take temperature into account
+  h *= (1 + 0.5*(pp->temp1 - 20)/(pp->temp1 + 273)); // take temperature into account
   distance.putValue(h);
   ms = millis();
   if (ms - lastDist > 3000) {
