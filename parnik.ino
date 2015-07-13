@@ -13,7 +13,7 @@ Average temperature(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.3.4"; /* Averages */
+const char version[] = "2.3.5"; /* Averages */
 
 #define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -112,11 +112,27 @@ void loop(void) {
   workHours = (float)workMillis/3600000.; // Hours;
   fanHours = (float)fanMillis/3600000.;
   pumpHours = (float)pumpMillis/3600000.;
-  // measure water volume
+
+  /* 
+   *  Measure temperature
+   */
+  sensors.requestTemperatures();
+  temp = sensors.getTempCByIndex(0);
+  temperature.putValue(temp);  
+  ms = millis();
+  if (ms - lastTemp > 3000) {
+    pp->temp1 = temperature.getAverage();
+    lastTemp = ms;
+  }
+  
+  /* 
+   *  measure water volume
+   */
   uS = sonar.ping_median(7);
   if (uS > 0) {
     h = (float)uS / US_ROUNDTRIP_CM;
   }  
+  h *= (1 - 0.5*(pp->temp1 - 20)/(pp->temp1 + 273)); // take temperature into account
   distance.putValue(h);
   ms = millis();
   if (ms - lastDist > 3000) {
@@ -137,19 +153,7 @@ void loop(void) {
      pp->hum1 = dht.getHumidityInt();
   }  
   */
-
-
-  /* 
-   *  Measure temperature
-   */
-  sensors.requestTemperatures();
-  temp = sensors.getTempCByIndex(0);
-  temperature.putValue(temp);  
-  ms = millis();
-  if (ms - lastTemp > 3000) {
-    pp->temp1 = temperature.getAverage();
-    lastTemp = ms;
-  }
+  
   /* 
    *  Measure voltage
    */
@@ -214,7 +218,10 @@ void loop(void) {
  * calculates the volume of water in the barrel (in Liters)
  */
 float toVolume(float h) {
+  //float vol;
   return barrel_volume*(1.0 - h/barrel_height);
+  //vol -= 0.5*(barrel_volume - vol)*(pp->temp1 - 20)/(pp->temp1 + 273);
+  //return vol;
 }  
 
 void serial_output() {
