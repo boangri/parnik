@@ -14,7 +14,7 @@ Average voltage(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.4.1"; /* Second temp sensor */
+const char version[] = "2.4.2"; /* Second temp sensor */
 
 #define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -49,7 +49,7 @@ NewPing sonar(triggerPin, echoPin, MAX_DISTANCE); // NewPing setup of pins and m
 float dividerValue;
 float humValue;
 float distValue;
-float temp;
+//float temp;
 float temp_avg = 0.0;
 float humidity;
 float humidity_avg = 0.0;
@@ -141,6 +141,8 @@ void loop(void) {
       pp->temp2 = sensors.getTempCByIndex(1);
       //temperature2.putValue(temp);
     }
+    convInProgress = false;
+    //temp = pp->temp1;
   }
   
   /* 
@@ -193,13 +195,13 @@ void loop(void) {
    * Fans control 
    */ 
   if (fanState == 1) {
-     if (temp < pp->temp_lo) {
+     if (pp->temp1 < pp->temp_lo) {
        digitalWrite(fanPin, OFF);
        fanState = 0;  
        pp->fans = fanState;  
      } 
   } else {
-     if (temp > pp->temp_hi) {
+     if (pp->temp1 > pp->temp_hi) {
        digitalWrite(fanPin, ON);    
        fanState = 1;
        pp->fans = fanState;
@@ -210,9 +212,9 @@ void loop(void) {
    */
   if (pumpState == 1) {
     float V;
-    V = (temp - pp->temp_pump) * Vpoliv;
+    V = (pp->temp1 - pp->temp_pump) * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
-     if ((water < 0.) || (temp < pp->temp_pump) || (water0 - water > V)) {
+     if ((water < 0.) || (pp->temp1 < pp->temp_pump) || (water0 - water > V)) {
        digitalWrite(pumpPin, OFF);
        pumpState = 0; 
        pp->pump = pumpState;   
@@ -221,7 +223,7 @@ void loop(void) {
      if (workHours >= Tpoliv*np) {       
        np++;  
        // Switch on the pump only if warm enought and there is water in the barrel     
-       if ((temp > pp->temp_pump) && (water > 0.)) {
+       if ((pp->temp1 > pp->temp_pump) && (water > 0.)) {
          digitalWrite(pumpPin, ON);    
          pumpState = 1;
          pp->pump = pumpState;
@@ -296,7 +298,7 @@ void lcd_output() {
   lcd.print(water); 
   
   lcd.setCursor(2, 2);
-  lcd.print(temp);  
+  lcd.print(pp->temp1);  
   lcd.setCursor(8, 2);
   lcd.print(pp->temp_hi);
   lcd.setCursor(14, 2);
