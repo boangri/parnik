@@ -111,7 +111,7 @@ void RS485(Parnik *pp)
         for (int j = 0; j < 2; j++) {
           obuf[i++] = *bp++;
         }  
-        var = (pp->temp_lo + 30.)*100.;
+        var = (pp->temp2 + 30.)*100.;
         ivar = (int)var;  
         bp = (byte *)&ivar;
         for (int j = 0; j < 2; j++) {
