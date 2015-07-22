@@ -14,7 +14,7 @@ Average voltage(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.4.2"; /* Second temp sensor */
+const char version[] = "2.4.3"; /* Second temp sensor */
 
 #define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -181,14 +181,17 @@ void loop(void) {
   volt = 55.52/1023.* dividerValue;
   voltage.putValue(volt);
   ms = millis();
-  if (ms - lastVolt > 3000) {
-    pp->volt = voltage.getAverage();
-    lastVolt = ms;
-  }
+//  if (ms - lastVolt > 3000) {
+//    pp->volt = voltage.getAverage();
+//    lastVolt = ms;
+//  }
   /*
    * Output data
    */
-  serial_output();
+  if (Serial.available() > 0) { 
+    Serial.read();
+    serial_output();
+  }   
   lcd_output();  
   
   /*

@@ -140,6 +140,7 @@ void RS485(Parnik *pp)
         obuf[i++] = pp->pump;
         break;
       case 4: //* power 
+        pp->volt = voltage.getAverage();
         var = (pp->volt)*100.;
         ivar = (int)var;
         bp = (byte *)&ivar;
