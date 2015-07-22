@@ -14,7 +14,7 @@ Average voltage(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.4.3"; /* Second temp sensor */
+const char version[] = "2.5.1"; /* LCD */
 
 #define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -279,7 +279,7 @@ void lcd_setup() {
   lcd.print("U=");
   lcd.setCursor(8, 1);
   lcd.print("W=");
-  
+ /* 
   lcd.setCursor(0, 2);
   lcd.print("T=");
   lcd.setCursor(7, 2);
@@ -289,28 +289,50 @@ void lcd_setup() {
   lcd.print("H=");
   lcd.setCursor(7, 3);
   lcd.print("/");  
+  */
 }
 
 void lcd_output() {
-  lcd.setCursor(14, 0);
-  lcd.print(workHours);
+  char buf[10];
+  lcd.setCursor(10, 0);
+  millis2str(buf, workMillis);
+  lcd.print(buf);
   
   lcd.setCursor(2, 1);
   lcd.print(volt); 
   lcd.setCursor(10, 1);
   lcd.print(water); 
   
-  lcd.setCursor(2, 2);
-  lcd.print(pp->temp1);  
-  lcd.setCursor(8, 2);
+  lcd.setCursor(0, 2);
+  lcd.print(pp->temp1);
+  lcd.setCursor(4, 2);
+  lcd.print("/");  
+  lcd.setCursor(5, 2);
   lcd.print(pp->temp_hi);
-  lcd.setCursor(14, 2);
-  lcd.print(fanHours);
+  lcd.setCursor(10, 2);
+  millis2str(buf, fanMillis);
+  lcd.print(buf);
   
-  lcd.setCursor(2, 3);
-  lcd.print(pp->hum1);
-  lcd.setCursor(8, 3);
+  lcd.setCursor(0, 3);
   lcd.print(pp->temp2);
-  lcd.setCursor(14, 3);
-  lcd.print(pumpHours);  
+  lcd.setCursor(4, 3);
+  lcd.print("/");
+  lcd.setCursor(5, 3);
+  lcd.print(pp->temp_pump);
+  lcd.setCursor(10, 3);
+  millis2str(buf, pumpMillis);
+  lcd.print(buf); 
 }  
+
+void millis2str(char buf[], unsigned long ms) {
+  int hours, mins, secs;
+  ms /= 1000;
+  secs = ms % 60;
+  ms -= secs;
+  ms /= 60;
+  mins = (ms % 60);
+  ms -= mins;
+  hours = ms /60;  
+  sprintf(buf, "%4d:%02d:%02d", hours, mins, secs);
+}
+
