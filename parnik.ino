@@ -9,11 +9,12 @@
 CRC16 crc16(1);
 
 Average voltage(N_AVG);
-Average temperature(N_AVG);
+//Average temperature1(N_AVG);
+//Average temperature2(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.3.6"; /* Averages */
+const char version[] = "2.4.3"; /* Second temp sensor */
 
 #define TEMP_FANS 27  // temperature for fans switching off
 #define TEMP_PUMP 23 // temperature - do not pump water if cold enought
@@ -39,13 +40,16 @@ LiquidCrystal lcd(3,5,6,7,8,9);
 OneWire ds(tempPin);  // on pin 10
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&ds);
+int numberOfDevices; 
+boolean convInProgress;
+
 #define MAX_DISTANCE 200 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 NewPing sonar(triggerPin, echoPin, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 
 float dividerValue;
 float humValue;
 float distValue;
-float temp;
+//float temp;
 float temp_avg = 0.0;
 float humidity;
 float humidity_avg = 0.0;
@@ -67,6 +71,13 @@ Parnik *pp = &parnik;
 void setup(void) {
   Serial.begin(9600);
   sensors.begin();
+  convInProgress = false;
+  numberOfDevices = sensors.getDeviceCount();
+  Serial.print("Locating devices...");
+  
+  Serial.print("Found ");
+  Serial.print(numberOfDevices, DEC);
+  Serial.println(" devices.");
 //  dht.attach(dhtPin);
 
   lcd_setup();
@@ -116,13 +127,22 @@ void loop(void) {
   /* 
    *  Measure temperature
    */
-  sensors.requestTemperatures();
-  temp = sensors.getTempCByIndex(0);
-  temperature.putValue(temp);  
-  ms = millis();
-  if (ms - lastTemp > 3000) {
-    pp->temp1 = temperature.getAverage();
-    lastTemp = ms;
+  if(!convInProgress) { //launch temp converson
+    sensors.setWaitForConversion(false);  // makes it async
+    sensors.requestTemperatures();
+    sensors.setWaitForConversion(true);
+    lastTemp = millis();
+    convInProgress = true;   
+  }
+  if(millis() - lastTemp > 750) { // data should be ready
+    pp->temp1 = sensors.getTempCByIndex(0);
+    //temperature1.putValue(temp); 
+    if (numberOfDevices > 1) {
+      pp->temp2 = sensors.getTempCByIndex(1);
+      //temperature2.putValue(temp);
+    }
+    convInProgress = false;
+    //temp = pp->temp1;
   }
   
   /* 
@@ -161,27 +181,30 @@ void loop(void) {
   volt = 55.52/1023.* dividerValue;
   voltage.putValue(volt);
   ms = millis();
-  if (ms - lastVolt > 3000) {
-    pp->volt = voltage.getAverage();
-    lastVolt = ms;
-  }
+//  if (ms - lastVolt > 3000) {
+//    pp->volt = voltage.getAverage();
+//    lastVolt = ms;
+//  }
   /*
    * Output data
    */
-  serial_output();
+  if (Serial.available() > 0) { 
+    Serial.read();
+    serial_output();
+  }   
   lcd_output();  
   
   /*
    * Fans control 
    */ 
   if (fanState == 1) {
-     if (temp < pp->temp_lo) {
+     if (pp->temp1 < pp->temp_lo) {
        digitalWrite(fanPin, OFF);
        fanState = 0;  
        pp->fans = fanState;  
      } 
   } else {
-     if (temp > pp->temp_hi) {
+     if (pp->temp1 > pp->temp_hi) {
        digitalWrite(fanPin, ON);    
        fanState = 1;
        pp->fans = fanState;
@@ -192,9 +215,9 @@ void loop(void) {
    */
   if (pumpState == 1) {
     float V;
-    V = (temp - pp->temp_pump) * Vpoliv;
+    V = (pp->temp1 - pp->temp_pump) * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
-     if ((water < 0.) || (temp < pp->temp_pump) || (water0 - water > V)) {
+     if ((water < 0.) || (pp->temp1 < pp->temp_pump) || (water0 - water > V)) {
        digitalWrite(pumpPin, OFF);
        pumpState = 0; 
        pp->pump = pumpState;   
@@ -203,7 +226,7 @@ void loop(void) {
      if (workHours >= Tpoliv*np) {       
        np++;  
        // Switch on the pump only if warm enought and there is water in the barrel     
-       if ((temp > pp->temp_pump) && (water > 0.)) {
+       if ((pp->temp1 > pp->temp_pump) && (water > 0.)) {
          digitalWrite(pumpPin, ON);    
          pumpState = 1;
          pp->pump = pumpState;
@@ -278,7 +301,7 @@ void lcd_output() {
   lcd.print(water); 
   
   lcd.setCursor(2, 2);
-  lcd.print(temp);  
+  lcd.print(pp->temp1);  
   lcd.setCursor(8, 2);
   lcd.print(pp->temp_hi);
   lcd.setCursor(14, 2);
