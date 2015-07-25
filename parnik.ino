@@ -14,10 +14,10 @@ Average voltage(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.5.1"; /* LCD */
+const char version[] = "2.5.2"; /* LCD */
 
-#define TEMP_FANS 27  // temperature for fans switching off
-#define TEMP_PUMP 23 // temperature - do not pump water if cold enought
+#define TEMP_FANS 27  // temperature for fans switching on
+#define TEMP_PUMP 21 // temperature - do not water if cold enought
 #define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
 
@@ -33,7 +33,7 @@ const int fanPin = 11;
 const int pumpPin = 12;
 
 const float Vpoliv = 1.0; // Liters per centigrade above TEMP_PUMP 
-const float Tpoliv = 4; // Watering every 4 hours
+const float Tpoliv = 3; // Watering every 3 hours
 //DHT dht = DHT();
 LiquidCrystal lcd(3,5,6,7,8,9);
 // DS18S20 Temperature chip i/o
@@ -217,7 +217,7 @@ void loop(void) {
     float V;
     V = (pp->temp1 - pp->temp_pump) * Vpoliv;
     //V = np == 1 ? 0.5 : V;  // First poliv - just for test
-     if ((water < 0.) || (pp->temp1 < pp->temp_pump) || (water0 - water > V)) {
+     if ((water < 0.) || (pp->temp1 < pp->temp_pump) || (pp->temp2 < pp->temp_pump) || (water0 - water > V)) {
        digitalWrite(pumpPin, OFF);
        pumpState = 0; 
        pp->pump = pumpState;   
@@ -226,7 +226,7 @@ void loop(void) {
      if (workHours >= Tpoliv*np) {       
        np++;  
        // Switch on the pump only if warm enought and there is water in the barrel     
-       if ((pp->temp1 > pp->temp_pump) && (water > 0.)) {
+       if ((pp->temp1 > pp->temp_pump) && (pp->temp2 > pp->temp_pump) && (water > 0.)) {
          digitalWrite(pumpPin, ON);    
          pumpState = 1;
          pp->pump = pumpState;
