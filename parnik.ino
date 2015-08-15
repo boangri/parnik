@@ -14,11 +14,11 @@ Average voltage(N_AVG);
 Average distance(N_AVG);
 #include "RS485.h"
 
-const char version[] = "2.5.2"; /* LCD */
+const char version[] = "2.5.3"; /* LCD */
 
 #define TEMP_FANS 27  // temperature for fans switching on
-#define TEMP_PUMP 21 // temperature - do not water if cold enought
-#define BARREL_HEIGHT 74.0 // max distanse from sonar to water surface which 
+#define TEMP_PUMP 20 // temperature - do not water if cold enought
+#define BARREL_HEIGHT 76.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
 
 #define ON LOW
@@ -301,6 +301,8 @@ void lcd_output() {
   lcd.setCursor(2, 1);
   lcd.print(volt); 
   lcd.setCursor(10, 1);
+  if(water < 100.) lcd.print(' ');
+  if(water < 10.) lcd.print(' ');
   lcd.print(water); 
   
   lcd.setCursor(0, 2);
