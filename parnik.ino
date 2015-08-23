@@ -17,7 +17,7 @@ Average distance(N_AVG);
 const char version[] = "2.5.3"; /* LCD */
 
 #define TEMP_FANS 27  // temperature for fans switching on
-#define TEMP_PUMP 20 // temperature - do not water if cold enought
+#define TEMP_PUMP 18 // temperature - do not water if cold enought
 #define BARREL_HEIGHT 76.0 // max distanse from sonar to water surface which 
 #define BARREL_DIAMETER 57.0 // 200L
 
